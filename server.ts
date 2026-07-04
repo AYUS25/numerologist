@@ -4,8 +4,34 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { generateNumerologyReport } from "./src/numerologyEngine";
 import dotenv from "dotenv";
+import { z } from "zod";
 
 dotenv.config();
+
+const inputSchema = z.object({
+  fullName: z.string()
+    .min(1, "Full name is required")
+    .max(50, "Name is too long")
+    .regex(/^[a-zA-Z\s\-']+$/, "Invalid characters in name. Only letters, spaces, hyphens, and apostrophes are allowed.")
+    .refine((val) => !/(ignore|previous|instruction|system|prompt|output|bypass|forget)/i.test(val), {
+      message: "Prompt injection attempt detected in fullName field. Request blocked."
+    }),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  timeOfBirth: z.string().optional(),
+  placeOfBirth: z.string().optional()
+});
+
+const reportPayloadSchema = z.object({
+  report: z.object({
+    input: inputSchema
+  }).passthrough()
+});
+
+const chatRequestSchema = reportPayloadSchema.extend({
+  messages: z.array(z.any()).optional(),
+  userMessage: z.string().min(1, "User message is required"),
+  language: z.string().optional()
+});
 
 const app = express();
 const PORT = 3000;
@@ -26,10 +52,13 @@ const ai = new GoogleGenAI({
 // 1. API: Calculate Numerology report
 app.post("/api/numerology/calculate", (req, res) => {
   try {
-    const { fullName, dateOfBirth, timeOfBirth, placeOfBirth } = req.body;
-    if (!fullName || !dateOfBirth) {
-      return res.status(400).json({ error: "Full Name and Date of Birth are required." });
+    const parsed = inputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const errorMessage = parsed.error.issues ? parsed.error.issues[0].message : "Validation error";
+      return res.status(400).json({ error: errorMessage });
     }
+    
+    const { fullName, dateOfBirth, timeOfBirth, placeOfBirth } = parsed.data;
     const report = generateNumerologyReport(fullName, dateOfBirth, timeOfBirth, placeOfBirth);
     return res.json(report);
   } catch (err: any) {
@@ -43,10 +72,12 @@ app.post("/api/numerology/calculate", (req, res) => {
 
 // 2. API: Chat with Numerologist AI
 app.post("/api/numerology/chat", async (req, res) => {
-  const { report, messages, userMessage, language } = req.body;
-  if (!report || !userMessage) {
-    return res.status(400).json({ error: "Blueprint report and user message are required." });
+  const parsed = chatRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const errorMessage = parsed.error.issues ? parsed.error.issues[0].message : "Validation error";
+    return res.status(400).json({ error: errorMessage });
   }
+  const { report, messages, userMessage, language } = req.body;
 
   try {
 
@@ -287,10 +318,11 @@ setInterval(() => {
 
 // 3. API: Generate Daily Horoscope
 app.post("/api/numerology/daily-forecast", async (req, res) => {
-  const { report } = req.body;
-  if (!report) {
-    return res.status(400).json({ error: "Blueprint report is required." });
+  const parsed = reportPayloadSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
   }
+  const { report } = req.body;
 
   const name = report.input?.fullName || "unknown";
   const dob = report.input?.dateOfBirth || "unknown";
@@ -409,8 +441,11 @@ Use professional, mystical, but grounded language. Do not use markdown headers, 
 
 // 4. API: Generate Real-World Sectoral Analysis
 app.post("/api/numerology/life-sectors", async (req, res) => {
+  const parsed = reportPayloadSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
   const { report } = req.body;
-  if (!report) return res.status(400).json({ error: "Blueprint report is required." });
 
   const name = report.input?.fullName || "unknown";
   const dob = report.input?.dateOfBirth || "unknown";
