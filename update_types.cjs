@@ -7,7 +7,6 @@ code = code.replace(
   partnerName: string;
   partnerDob: string;
   score: number;
-  synergyIndex: number;
   overallSynergy: string;
   verdict: 'Excellent' | 'Good' | 'Neutral' | 'Challenging' | 'Warning';
   recommendations: {
@@ -16,8 +15,6 @@ code = code.replace(
     business: { score: number; label: string; description: string };
   };
   warnings: string[];
-  cautionaryInsights: string[];
-  radarData: { subject: string; score: number; fullMark: number }[];
   matchDetails: {
     lifePath: string;
     soulUrge: string;

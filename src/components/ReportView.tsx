@@ -29,9 +29,13 @@ import {
   AlertTriangle,
   BookOpen,
   Moon, Globe, Home,
-  X
+  X,
+  Users,
+  Briefcase,
+  Target,
+  Flame
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell } from 'recharts';
 import ZodiacConstellation from './ZodiacConstellation';
 import MilestoneTimeline from './MilestoneTimeline';
 import LifeCycleMap from './LifeCycleMap';
@@ -311,7 +315,16 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
   // Compatibility Tab Local State
   const [partnerName, setPartnerName] = useState('');
   const [partnerDob, setPartnerDob] = useState('');
+  const [relType, setRelType] = useState<'Spouse' | 'Business' | 'Mentor' | 'Friend' | 'Family' | 'Rival' | 'Dating'>('Spouse');
   const [compatResult, setCompatResult] = useState<any | null>(null);
+
+  // Auto-regenerate report on the fly if missing spiritual remedies (backward compatibility)
+  const safeReport = React.useMemo(() => {
+    if (!report.spiritualRemedies) {
+      return generateNumerologyReport(report.input.fullName, report.input.dateOfBirth, report.input.timeOfBirth, report.input.placeOfBirth);
+    }
+    return report;
+  }, [report]);
 
   // Forecast Tab Local State
   const [dailyHoroscope, setDailyHoroscope] = useState<string | null>(null);
@@ -441,7 +454,7 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
     e.preventDefault();
     if (!partnerName.trim() || !partnerDob) return;
     try {
-      const result = calculatePartnerCompatibility(report, partnerName.trim(), partnerDob);
+      const result = calculatePartnerCompatibility(safeReport, partnerName.trim(), partnerDob, relType);
       setCompatResult(result);
     } catch (err) {
       console.error(err);
@@ -1495,56 +1508,224 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                 <h3 className="font-serif text-xl text-blue-500 tracking-wide text-xs uppercase mb-2 flex items-center gap-2">
                   <Award className="w-5 h-5 text-blue-500" />
-                  Spiritual Prescriptions
+                  Spiritual Alignment & Remedial Prescriptions
                 </h3>
-                <p className="text-zinc-400 text-xs font-sans mb-6">
-                  Curated energetic remedies harmonized with your Life Path ({metrics.lifePath.number}), Astrological Sign ({report.astrology?.sign || 'Unknown'}), and active Karmic balances.
+                <p className="text-zinc-400 text-xs font-sans mb-8">
+                  Based on your Life Path ({metrics.lifePath.number}), active challenges, and Karmic Debts, the energy engine has mapped your alignment across the five key sectors of existence. Implement these prescriptions to balance blockages and catalyze fulfillment.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-transparent border border-white/[0.08] p-5 rounded-xl flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-blue-900/30 rounded-full flex items-center justify-center mb-4 border border-blue-500/20">
-                      <Sparkles className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <h5 className="text-xs font-bold tracking-wide text-xs uppercase text-blue-300 mb-2">Crystal Resonance</h5>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                      {metrics.lifePath.number === 1 ? 'Sunstone or Clear Quartz to amplify independence and leadership.' : ''}
-                      {metrics.lifePath.number === 2 ? 'Moonstone or Rose Quartz to support emotional balance and harmony.' : ''}
-                      {metrics.lifePath.number === 3 ? 'Citrine or Amethyst to inspire creativity and joyful expression.' : ''}
-                      {metrics.lifePath.number === 4 ? 'Smoky Quartz or Hematite for deep grounding and structured discipline.' : ''}
-                      {metrics.lifePath.number === 5 ? 'Aquamarine or Carnelian to embrace change and protect during travel.' : ''}
-                      {metrics.lifePath.number === 6 ? 'Emerald or Lapis Lazuli to nurture compassion and heal the heart space.' : ''}
-                      {metrics.lifePath.number === 7 ? 'Labradorite or Selenite to deepen intuition and spiritual connection.' : ''}
-                      {metrics.lifePath.number === 8 ? 'Pyrite or Tigers Eye to manifest abundance and executive mastery.' : ''}
-                      {metrics.lifePath.number === 9 ? 'Moldavite or Rhodonite to support universal love and humanitarian service.' : ''}
-                      {[11, 22, 33].includes(metrics.lifePath.number) ? 'Azeztulite or Danburite to manage high-frequency master vibrations.' : ''}
-                    </p>
-                  </motion.div>
+                {/* Life Alignment Dashboard */}
+                {safeReport.spiritualRemedies && (
+                  <div className="mb-10">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-white/[0.06] pb-2 font-serif flex items-center gap-2">
+                      <Target className="w-4 h-4 text-blue-400" />
+                      Life Alignment Dashboard
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {safeReport.spiritualRemedies.map((sec: any, idx: number) => {
+                        const isSevere = sec.alignmentScore < 50;
+                        const isLow = sec.alignmentScore < 70;
+                        const scoreColor = isSevere ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500';
+                        const textColor = isSevere ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400';
+                        
+                        let SectorIcon = Award;
+                        if (sec.sector.includes('Career')) SectorIcon = Briefcase;
+                        else if (sec.sector.includes('Love')) SectorIcon = Heart;
+                        else if (sec.sector.includes('Wealth')) SectorIcon = TrendingUp;
+                        else if (sec.sector.includes('Health')) SectorIcon = Activity;
+                        else if (sec.sector.includes('Spiritual')) SectorIcon = Moon;
 
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-transparent border border-white/[0.08] p-5 rounded-xl flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-amber-900/30 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
-                      <Sparkles className="w-5 h-5 text-amber-400" />
+                        return (
+                          <div key={idx} className="glass-panel p-4 rounded-xl flex flex-col justify-between border border-white/[0.04]">
+                            <div className="flex items-center gap-2 mb-3">
+                              <SectorIcon className={`w-4 h-4 ${textColor}`} />
+                              <span className="text-[10px] font-sans font-bold uppercase text-zinc-300 tracking-wider line-clamp-1">{sec.sector}</span>
+                            </div>
+                            <div className="flex items-end justify-between mb-2">
+                              <span className={`text-2xl font-serif font-bold ${textColor}`}>{sec.alignmentScore}%</span>
+                              <span className="text-[9px] uppercase font-bold text-zinc-500 mb-1">{isSevere ? 'Weak' : isLow ? 'Moderate' : 'Strong'}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${scoreColor} transition-all duration-1000`} style={{ width: `${sec.alignmentScore}%` }}></div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <h5 className="text-xs font-bold tracking-wide text-xs uppercase text-amber-300 mb-2">Sacred Incense</h5>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                      {report.astrology?.element === 'Fire' ? 'Frankincense or Cinnamon to fuel your cardinal creative fire.' : ''}
-                      {report.astrology?.element === 'Earth' ? 'Patchouli or Sandalwood to root your physical energy.' : ''}
-                      {report.astrology?.element === 'Air' ? 'Lavender or Palo Santo to clear mental static and enhance focus.' : ''}
-                      {report.astrology?.element === 'Water' ? 'Myrrh or Jasmine to support emotional fluidity and release.' : ''}
-                      {!['Fire', 'Earth', 'Air', 'Water'].includes(report.astrology?.element || '') ? 'Copal or Sage to cleanse your auric field.' : ''}
-                    </p>
-                  </motion.div>
+                  </div>
+                )}
 
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-transparent border border-white/[0.08] p-5 rounded-xl flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-emerald-900/30 rounded-full flex items-center justify-center mb-4 border border-emerald-500/20">
-                      <Heart className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <h5 className="text-xs font-bold tracking-wide text-xs uppercase text-emerald-300 mb-2">Daily Mantra</h5>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-sans italic">
-                      "I align with the highest frequency of my {metrics.lifePath.number} Life Path, balancing the energy of {report.astrology?.rulingPlanet || 'the cosmos'} to fulfill my spiritual blueprint."
-                    </p>
-                  </motion.div>
+
+
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-white/[0.06] pb-2 font-serif flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  Actionable Sector Protocols
+                </h4>
+                <div className="space-y-6">
+                  {safeReport.spiritualRemedies && safeReport.spiritualRemedies.map((sec: any, idx: number) => {
+                    const isLow = sec.alignmentScore < 70;
+                    const isSevere = sec.alignmentScore < 50;
+                    
+                    // Determine sector icon
+                    let SectorIcon = Award;
+                    if (sec.sector.includes('Career')) SectorIcon = Briefcase;
+                    else if (sec.sector.includes('Love')) SectorIcon = Heart;
+                    else if (sec.sector.includes('Wealth')) SectorIcon = TrendingUp;
+                    else if (sec.sector.includes('Health')) SectorIcon = Activity;
+                    else if (sec.sector.includes('Spiritual')) SectorIcon = Moon;
+
+                    return (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.08 }}
+                        className="glass-panel p-6 rounded-xl border border-white/[0.06] hover:border-blue-500/30 transition-all duration-300"
+                      >
+                        {/* Sector Header & Scale */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-white/[0.06]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-950/40 rounded-full border border-blue-500/20 flex items-center justify-center text-blue-400">
+                              <SectorIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="font-serif text-lg text-white tracking-wide">{sec.sector}</h4>
+                              <span className={`text-[10px] font-sans font-semibold uppercase tracking-wider ${isSevere ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                {isSevere ? 'Significant Obstacles Detected' : isLow ? 'Moderate Vibrational Blockage' : 'Highly Harmonized Alignment'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Scale / Gauge Bar */}
+                          <div className="w-full md:w-64 space-y-1.5">
+                            <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+                              <span>Vibrational Flow</span>
+                              <span className={isSevere ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'}>
+                                {sec.alignmentScore}%
+                              </span>
+                            </div>
+                            <div className="w-full h-2.5 bg-white/[0.04] rounded-full overflow-hidden border border-white/[0.06]">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${sec.alignmentScore}%` }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                                className={`h-full rounded-full ${isSevere ? 'bg-gradient-to-r from-rose-600 to-rose-400' : isLow ? 'bg-gradient-to-r from-amber-600 to-amber-400' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'}`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Challenge Text */}
+                        <p className="text-zinc-300 text-xs leading-relaxed mb-6 italic bg-white/[0.02] px-4 py-3 rounded-lg border border-white/[0.04]">
+                          {sec.challengeText}
+                        </p>
+
+                        {/* Actionable Remedies Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {/* Color Remedy */}
+                          <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center gap-1.5 text-indigo-400 text-[10px] uppercase font-bold tracking-wider mb-2">
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>Spectral Aura Remedy</span>
+                              </div>
+                              <span className="text-white font-serif font-bold text-sm block mb-1">{sec.colorRemedy.color}</span>
+                              <p className="text-zinc-400 text-[11px] leading-relaxed mb-3">{sec.colorRemedy.vibration}</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/[0.04] text-[10px] text-zinc-500 leading-normal">
+                              <span className="font-bold text-zinc-400">Integration:</span> {sec.colorRemedy.practice}
+                            </div>
+                          </div>
+
+                          {/* Sacred Practice */}
+                          <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center gap-1.5 text-amber-400 text-[10px] uppercase font-bold tracking-wider mb-2">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Sacred Daily Ritual</span>
+                              </div>
+                              <span className="text-white font-serif font-bold text-sm block mb-1">{sec.sacredPractice.title}</span>
+                              <p className="text-zinc-400 text-[11px] leading-relaxed mb-3">{sec.sacredPractice.instructions}</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/[0.04] text-[10px] text-zinc-500 leading-normal">
+                              <span className="font-bold text-zinc-400">Frequency:</span> {sec.sacredPractice.frequency}
+                            </div>
+                          </div>
+
+                          {/* Sanskrit Mantra */}
+                          <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-2">
+                                <BookOpen className="w-3.5 h-3.5" />
+                                <span>Sanskrit Mantra Vibration</span>
+                              </div>
+                              <div className="bg-emerald-950/30 border border-emerald-500/20 px-3 py-2 rounded-lg text-center mb-2">
+                                <span className="text-emerald-300 font-serif font-bold text-xs tracking-wide block leading-snug">{sec.mantra.sanskrit}</span>
+                              </div>
+                              <p className="text-zinc-400 text-[10px] leading-relaxed mb-3 italic">"{sec.mantra.englishTranslation}"</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/[0.04] text-[10px] text-zinc-500 leading-normal">
+                              <span className="font-bold text-zinc-400">Aura Impact:</span> {sec.mantra.benefits}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
+
+                
+                {/* Current Phase Prescriptions */}
+                {safeReport.remedies && safeReport.remedies.length > 0 && (
+                  <div className="mt-10 mb-10">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-white/[0.06] pb-2 font-serif flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-400" />
+                      Active Life Phase Remedial Prescriptions
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {safeReport.remedies.map((remedy: any, idx: number) => (
+                        <div key={idx} className="bg-emerald-950/10 border border-emerald-500/20 p-4 rounded-xl">
+                          <h5 className="font-serif text-[11px] uppercase tracking-wider text-emerald-400 mb-2">{remedy.category}</h5>
+                          <p className="text-zinc-300 text-xs leading-relaxed font-sans">{remedy.advice}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Crystal Resonance Matrix */}
+                {safeReport.masterCrystals && (
+                  <div className="mt-10">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-white/[0.06] pb-2 font-serif flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      Crystal Resonance Matrix
+                    </h4>
+                    <p className="text-[11px] text-zinc-400 mb-4 leading-relaxed max-w-3xl">
+                      Crystals hold stable vibrational frequencies. By introducing these specific minerals into your auric field, you can organically neutralize the numerological deficiencies highlighted in your alignment dashboard. These primary recommendations are mathematically mapped to your core vibrational signature.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {safeReport.masterCrystals.map((crystal: any, idx: number) => (
+                        <div key={idx} className="bg-purple-950/10 border border-purple-500/20 p-5 rounded-xl hover:border-purple-500/40 transition-colors flex flex-col justify-between relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-colors"></div>
+                          <div>
+                            <div className="flex justify-between items-start mb-2 relative z-10">
+                              <h5 className="font-serif text-lg text-purple-300">{crystal.name}</h5>
+                              <span className="text-[9px] uppercase font-bold tracking-wider text-purple-400/60 bg-purple-900/30 px-2 py-1 rounded">
+                                {idx === 0 ? 'Career Resonance' : idx === 1 ? 'Relational Resonance' : idx === 2 ? 'Vitality Resonance' : idx === 3 ? 'Wealth Resonance' : idx === 4 ? 'Spiritual Resonance' : idx === 5 ? 'Active Phase Resonance' : 'Karmic Resonance'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-300 leading-relaxed mb-3 font-sans relative z-10">
+                              {crystal.benefits}
+                            </p>
+                          </div>
+                          <div className="pt-3 border-t border-purple-500/10 text-[10px] text-purple-200/60 leading-normal relative z-10">
+                            <span className="font-bold text-purple-300">Resonance Protocol:</span> {crystal.methodOfUse}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -1752,7 +1933,7 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                 <div className="lg:col-span-5 glass-panel p-6 rounded-xl">
                   <form onSubmit={handleTestCompatibility} className="space-y-5">
                     <div>
-                      <label className="block text-xs tracking-wide text-xs uppercase text-zinc-400 mb-2 font-sans font-medium">
+                      <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2 font-sans font-medium">
                         Companion Name
                       </label>
                       <input
@@ -1766,7 +1947,7 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                     </div>
 
                     <div>
-                      <label className="block text-xs tracking-wide text-xs uppercase text-zinc-400 mb-2 font-sans font-medium">
+                      <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2 font-sans font-medium">
                         Companion DOB (Birth Anchor)
                       </label>
                       <input
@@ -1776,6 +1957,30 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                         className="w-full glass-panel focus:border-blue-500 rounded-xl py-3.5 px-4 text-[#f5f5f7] focus:outline-none transition-colors text-xs font-sans font-medium"
                         required
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2 font-sans font-medium">
+                        Relationship dynamic lens
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={relType}
+                          onChange={(e) => setRelType(e.target.value as any)}
+                          className="w-full glass-panel focus:border-blue-500 rounded-xl py-3.5 px-4 text-[#f5f5f7] focus:outline-none transition-colors text-xs font-sans font-medium appearance-none cursor-pointer"
+                        >
+                          <option className="bg-zinc-900 text-zinc-100" value="Spouse">Spouse & Marriage (Romantic)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Dating">Dating & Early Romance (Passionate Spark)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Business">Business Partner & Executive (Professional)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Mentor">Mentor & Spiritual Guide (Guiding)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Friend">Close Friend & Creative Peer (Platonic)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Family">Family Bond & Kinship (Familial)</option>
+                          <option className="bg-zinc-900 text-zinc-100" value="Rival">Karmic Catalyst & Rival (Challenging)</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
+                      </div>
                     </div>
 
                     <button onMouseEnter={() => playHoverTick()} 
@@ -1802,7 +2007,52 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Score circle */}
+                      {/* Warnings panel */}
+                      {compatResult.warnings && compatResult.warnings.length > 0 && (
+                         <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-2">
+                           <div className="flex items-center gap-2 text-rose-400 text-xs uppercase font-bold tracking-wider font-serif">
+                             <AlertTriangle className="w-4 h-4 text-rose-500" />
+                             <span>Karmic Warnings Detected</span>
+                           </div>
+                           <ul className="list-disc pl-5 space-y-1">
+                             {compatResult.warnings.map((w: string, i: number) => (
+                               <li key={i} className="text-xs text-rose-200/80 leading-relaxed font-sans">{w}</li>
+                             ))}
+                           </ul>
+                         </div>
+                      )}
+
+                      {/* Mirror Effect Friction Alert */}
+                      {compatResult.mirrorEffectAlert && (
+                        <div className="p-5 bg-rose-950/25 border border-rose-500/30 rounded-xl space-y-2 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
+                          <div className="flex items-center gap-2 text-rose-400 text-xs uppercase font-bold tracking-wider font-serif">
+                            <AlertTriangle className="w-5 h-5 text-rose-500 animate-pulse shrink-0" />
+                            <span>Mirror Effect Friction Alert</span>
+                          </div>
+                          <h5 className="font-serif text-sm text-rose-300">{compatResult.mirrorEffectAlert.title}</h5>
+                          <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                            {compatResult.mirrorEffectAlert.description}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Cautionary Insight */}
+                      {compatResult.cautionaryInsights && compatResult.cautionaryInsights.length > 0 && (
+                         <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl space-y-2">
+                           <div className="flex items-center gap-2 text-orange-400 text-xs uppercase font-bold tracking-wider font-serif">
+                             <AlertTriangle className="w-4 h-4" />
+                             <span>Cautionary Insight: Karmic Dissonance</span>
+                           </div>
+                           <ul className="list-disc pl-5 space-y-1">
+                             {compatResult.cautionaryInsights.map((w: string, i: number) => (
+                               <li key={i} className="text-xs text-orange-200/80 leading-relaxed font-sans">{w}</li>
+                             ))}
+                           </ul>
+                         </div>
+                      )}
+
+                      {/* Overall Synergy Index */}
                       <div className="glass-panel p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
                         <div className="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center shrink-0 relative">
                           {/* SVG Gauge */}
@@ -1810,28 +2060,30 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                             <circle cx="50%" cy="50%" r="40%" stroke="#2a2a2a" strokeWidth="8%" fill="none" />
                             <circle 
                               cx="50%" cy="50%" r="40%" 
-                              stroke="#4f46e5" 
+                              stroke={(compatResult?.score || 0) >= 70 ? "#10b981" : (compatResult?.score || 0) >= 50 ? "#f59e0b" : "#ef4444"} 
                               strokeWidth="8%" 
                               fill="none"
                               strokeDasharray={`${2 * Math.PI * 40}%`}
-                              strokeDashoffset={`${(2 * Math.PI * 40) - (compatResult.score / 100) * (2 * Math.PI * 40)}%`}
+                              strokeDashoffset={`${(2 * Math.PI * 40) - ((compatResult?.score || 0) / 100) * (2 * Math.PI * 40)}%`}
                               className="transition-all duration-1000 ease-out"
                               strokeLinecap="round"
                             />
                           </svg>
-                          <span className="font-serif text-3xl font-bold text-blue-500 relative z-10">
-                            {compatResult.score}%
+                          <span className={`font-serif text-3xl font-bold relative z-10 ${(compatResult?.score || 0) >= 70 ? 'text-emerald-400' : (compatResult?.score || 0) >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                            {compatResult?.score || 0}%
                           </span>
                           <span className="text-[8px] font-sans font-medium text-zinc-400 uppercase absolute -bottom-2 bg-white/[0.03] backdrop-blur-md px-1 z-10 rounded">
                             SYNERGY
                           </span>
                         </div>
                         <div>
-                          <span className="text-xs uppercase font-bold tracking-wider text-blue-500 font-serif block">
-                            Cosmic Match Result
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs uppercase font-bold tracking-wider text-blue-500 font-serif block">
+                              Cosmic Match Result ({relType} Lens)
+                            </span>
+                          </div>
                           <p className="text-xs text-zinc-400 mt-1 font-sans font-medium uppercase">
-                            Target: {compatResult.partnerName}
+                            Target Partner: {compatResult.partnerName}
                           </p>
                           <p className="text-xs text-zinc-300 mt-2 leading-relaxed font-sans">
                             {compatResult.overallSynergy}
@@ -1839,20 +2091,132 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                         </div>
                       </div>
 
+                      {/* Karmic Balance Section */}
+                      {compatResult.karmicBalance && (
+                        <div className="glass-panel p-6 rounded-xl border border-blue-500/20 relative overflow-hidden bg-gradient-to-br from-blue-950/20 to-indigo-950/20">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl"></div>
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-white/[0.06] mb-4">
+                            <div className="flex items-center gap-2.5">
+                              <Globe className="w-5 h-5 text-indigo-400" />
+                              <div>
+                                <h4 className="font-serif text-base text-white">Karmic Connection Balance</h4>
+                                <span className="text-[10px] text-indigo-300 font-sans uppercase font-bold tracking-wider">
+                                  Bond Profile: {compatResult?.karmicBalance?.connectionType || 'Unknown'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-indigo-950/40 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl text-center shrink-0">
+                              <span className="text-[9px] font-sans text-indigo-300 uppercase block tracking-wider font-semibold">Balance Index</span>
+                              <span className="text-lg font-serif font-bold text-white">{compatResult?.karmicBalance?.score || 0}/100</span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-zinc-300 text-xs leading-relaxed mb-4 font-sans italic">
+                            {compatResult.karmicBalance.description}
+                          </p>
+
+                          <div className="space-y-2 pt-2 border-t border-white/[0.04]">
+                            <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider block">Karmic Contracts & Teachings:</span>
+                            <ul className="space-y-1.5 pl-1">
+                              {compatResult.karmicBalance.lessons.map((lesson: string, lIdx: number) => (
+                                <li key={lIdx} className="text-xs text-zinc-300 leading-relaxed font-sans flex items-start gap-2">
+                                  <span className="text-indigo-400 shrink-0 mt-0.5">•</span>
+                                  <span>{lesson}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Radar Chart for 7 Dimensions */}
+                      {compatResult.radarData && compatResult.radarData.length > 0 && (
+                        <div className="glass-panel p-6 rounded-xl flex flex-col items-center">
+                          <span className="text-xs uppercase font-bold text-blue-500 tracking-wider font-serif mb-1 block w-full text-center">
+                            7-Axis Synergy spectrum Map
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-sans mb-4 block w-full text-center">
+                            Hover over any vertex to reveal specialized explanations
+                          </span>
+                          <div className="w-full h-[280px] sm:h-[340px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={compatResult?.radarData || []}>
+                                <PolarGrid stroke="#3f3f46" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'sans-serif' }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar name="Synergy" dataKey="score" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.4} />
+                                <RechartsTooltip 
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-black/95 border border-blue-500/40 p-3 rounded-lg max-w-xs shadow-2xl backdrop-blur-md">
+                                          <p className="text-xs font-serif font-bold text-blue-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                            <span>{data?.subject || 'Unknown'}</span>
+                                            <span className="text-white bg-blue-900/40 px-1.5 py-0.5 rounded text-[10px]">{data?.score || 0}%</span>
+                                          </p>
+                                          <p className="text-[10px] text-zinc-300 leading-relaxed font-sans">
+                                            {data?.explanation || ''}
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }} 
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Category Recommendations */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {[
+                          { key: 'romance', label: 'Romantic & Emotional', icon: <Heart className="w-4 h-4" /> },
+                          { key: 'friendship', label: 'Platonic & Friendship', icon: <Sparkles className="w-4 h-4" /> },
+                          { key: 'business', label: 'Business & Professional', icon: <Briefcase className="w-4 h-4" /> }
+                        ].map((cat) => {
+                          const data = compatResult?.recommendations?.[cat.key as keyof typeof compatResult.recommendations];
+                          let colorClass = "text-emerald-400";
+                          let bgClass = "bg-emerald-500/10 border-emerald-500/20";
+                          if (data && (data.score || 0) < 50) {
+                            colorClass = "text-rose-400";
+                            bgClass = "bg-rose-500/10 border-rose-500/20";
+                          } else if (data && (data.score || 0) < 75) {
+                            colorClass = "text-amber-400";
+                            bgClass = "bg-amber-500/10 border-amber-500/20";
+                          }
+                          
+                          if (!data) return null;
+                          
+                          return (
+                            <div key={cat.key} className={`p-4 rounded-xl border ${bgClass} flex flex-col items-center text-center justify-between`}>
+                              <div className="flex flex-col items-center">
+                                <div className={`${colorClass} mb-2`}>{cat.icon}</div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-300 tracking-wider block">{cat.label}</span>
+                                <span className={`text-lg font-serif font-bold ${colorClass} my-1`}>{data.score || 0}%</span>
+                              </div>
+                              <span className={`text-[9px] uppercase font-bold tracking-wider ${colorClass}`}>{data.label || ''}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
                       {/* Detail points */}
                       <div className="space-y-4">
                         {[
                           { title: 'Life Path Integration (Sovereign Paths)', desc: compatResult.matchDetails.lifePath },
                           { title: 'Soul Urge Connection (Inner Hearts)', desc: compatResult.matchDetails.soulUrge },
-                          { title: 'Expression Alignment (Active Cooperation)', desc: compatResult.matchDetails.expression }
+                          { title: 'Expression Alignment (Active Cooperation)', desc: compatResult.matchDetails.expression },
+                          { title: 'Destiny Trajectory (Long-Term Goals)', desc: compatResult.matchDetails.destiny },
+                          { title: 'Karmic Friction (Lessons & Debts)', desc: compatResult.matchDetails.karmic }
                         ].map((detail, idx) => (
                           <div key={idx} className="glass-panel p-4 rounded-xl text-left relative overflow-hidden">
                             <span className="text-xs uppercase font-bold text-blue-500 font-sans block mb-1">
                               {detail.title}
                             </span>
-                            <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                              {detail.desc}
-                            </p>
+                            <p className="text-xs text-zinc-300 leading-relaxed font-sans">{detail.desc}</p>
                           </div>
                         ))}
                       </div>
@@ -2269,9 +2633,12 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                       />
                       <Bar dataKey="score" fill="#0a84ff" radius={[0, 4, 4, 0]} barSize={16}>
                          {
-                           report.lifePredictions.map((entry: any, index: number) => (
-                             <Cell key={`cell-${index}`} fill={entry.score > 75 ? '#32d74b' : entry.score > 50 ? '#0a84ff' : '#ff9f0a'} />
-                           ))
+                           report.lifePredictions.map((entry: any, index: number) => {
+                             const score = entry?.score || 0;
+                             return (
+                               <Cell key={`cell-${index}`} fill={score > 75 ? '#32d74b' : score > 50 ? '#0a84ff' : '#ff9f0a'} />
+                             );
+                           })
                          }
                       </Bar>
                     </BarChart>
@@ -2312,7 +2679,7 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                     <h4 className="text-xl font-bold text-zinc-200 tracking-wide text-xs uppercase mb-6 flex justify-between items-center font-serif">
                       {sector.category}
                       <div className="flex flex-col items-end">
-                        <span className="text-blue-400 font-serif text-3xl">{sector.score}<span className="text-[12px] text-zinc-400 font-sans ml-1">/100</span></span>
+                        <span className="text-blue-400 font-serif text-3xl">{sector.score || 0}<span className="text-[12px] text-zinc-400 font-sans ml-1">/100</span></span>
                         <span className="text-xs tracking-wide text-xs uppercase text-zinc-500 mt-1">Alignment Score</span>
                       </div>
                     </h4>
@@ -2320,7 +2687,7 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                     <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden mb-8 border border-white/5 shadow-inner">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: `${sector.score}%` }}
+                        animate={{ width: `${sector.score || 0}%` }}
                         transition={{ delay: 0.2, duration: 1.5, type: 'spring' }}
                         className="bg-gradient-to-r from-blue-900 via-blue-500 to-blue-300 h-full shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
                       />

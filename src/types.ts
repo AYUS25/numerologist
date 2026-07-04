@@ -52,13 +52,37 @@ export interface CompatibilityResult {
   partnerName: string;
   partnerDob: string;
   score: number;
+  synergyIndex: number;
   overallSynergy: string;
+  verdict: 'Excellent' | 'Good' | 'Neutral' | 'Challenging' | 'Warning';
+  recommendations: {
+    romance: { score: number; label: string; description: string };
+    friendship: { score: number; label: string; description: string };
+    business: { score: number; label: string; description: string };
+  };
+  warnings: string[];
+  cautionaryInsights: string[];
+  radarData: { subject: string; score: number; fullMark: number; explanation?: string }[];
   matchDetails: {
     lifePath: string;
     soulUrge: string;
     expression: string;
+    destiny: string;
+    karmic: string;
+  };
+  mirrorEffectAlert?: {
+    challengeNumber: number;
+    title: string;
+    description: string;
+  } | null;
+  karmicBalance?: {
+    score: number;
+    connectionType: 'Soulmate' | 'Karmic Teacher' | 'Twin Flame' | 'Catalyst' | 'Neutral';
+    lessons: string[];
+    description: string;
   };
 }
+
 
 export interface NumerologyMetrics {
   rootNumber: number;
@@ -210,6 +234,12 @@ export interface LifecyclePhase {
   challenge: number;
 }
 
+export interface MasterCrystal {
+  name: string;
+  benefits: string;
+  methodOfUse: string;
+}
+
 export interface NumerologyReport {
   peaceIndex?: number;
   prosperityPotential?: number;
@@ -242,6 +272,29 @@ export interface NumerologyReport {
   lunarPhase?: LunarPhase;
   planetaryHour?: PlanetaryHour; // High-level overall profile synthesis
   lifePredictions?: LifePredictionSector[];
+  spiritualRemedies?: SpiritualRemedySection[];
+  masterCrystals?: MasterCrystal[];
+}
+
+export interface SpiritualRemedySection {
+  sector: string;
+  alignmentScore: number;
+  challengeText: string;
+  colorRemedy: {
+    color: string;
+    vibration: string;
+    practice: string;
+  };
+  sacredPractice: {
+    title: string;
+    frequency: string;
+    instructions: string;
+  };
+  mantra: {
+    sanskrit: string;
+    englishTranslation: string;
+    benefits: string;
+  };
 }
 
 export interface ChatMessage {
