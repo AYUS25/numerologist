@@ -1,0 +1,6 @@
+{
+  "name": "Numerologist AI",
+  "description": "The ultimate professional-grade numerology analysis suite. Calculates Core Pentad, Pinnacles, Challenges, Life Path Cycles, Karmic Debts, Name Optimization and provides live spiritual consultations with an AI Master Oracle.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
