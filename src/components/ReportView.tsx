@@ -2719,6 +2719,113 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
                            </p>
                         </div>
                       </div>
+
+                      {/* Deep Karmic Integration */}
+                      {sector.karmicIntegration && (
+                        <div className="col-span-1 md:col-span-2 bg-[#1c1c1e] p-6 rounded-xl border border-white/5 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                          <h5 className="text-xs font-bold text-amber-300 uppercase tracking-wider mb-3 font-sans font-medium flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-amber-400" /> Karmic Blueprint Integration
+                          </h5>
+                          <p className="text-sm text-zinc-300 font-sans leading-relaxed">
+                            {sector.karmicIntegration}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Vibrational Anchors / Lucky Pillars */}
+                      {sector.luckyPillars && (
+                        <div className="col-span-1 md:col-span-2 bg-[#1c1c1e]/40 p-6 rounded-xl border border-white/5">
+                          <h5 className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-6 font-sans font-medium flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-indigo-400" /> Vibrational Anchors & Pillars
+                          </h5>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div className="bg-black/30 p-4 rounded-xl border border-white/[0.03]">
+                              <span className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-sans">Power Numbers</span>
+                              <div className="flex flex-wrap gap-2">
+                                {sector.luckyPillars.numbers.map((n: number, i: number) => (
+                                  <span key={i} className="w-7 h-7 flex items-center justify-center bg-indigo-500/10 text-indigo-300 text-xs font-bold rounded-full border border-indigo-500/20 shadow-inner">
+                                    {n}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="bg-black/30 p-4 rounded-xl border border-white/[0.03]">
+                              <span className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-sans">Resonant Colors</span>
+                              <div className="flex flex-col gap-1.5">
+                                {sector.luckyPillars.colors.map((c: string, i: number) => (
+                                  <div key={i} className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]"></span>
+                                    <span className="text-xs text-zinc-300 font-sans">{c}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="bg-black/30 p-4 rounded-xl border border-white/[0.03]">
+                              <span className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-sans">Temporal Gates</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {sector.luckyPillars.days.map((d: string, i: number) => (
+                                  <span key={i} className="text-[11px] text-indigo-300 bg-indigo-500/5 px-2 py-0.5 rounded-md border border-indigo-500/10 font-sans font-medium">
+                                    {d}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="bg-black/30 p-4 rounded-xl border border-white/[0.03]">
+                              <span className="block text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-sans">Guardian Mineral</span>
+                              <div className="flex items-center gap-2">
+                                <Award className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span className="text-xs text-amber-200 font-sans font-medium">{sector.luckyPillars.gemstone}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Life-Phase Alignment Roadmap */}
+                      {sector.lifecycleForecast && (
+                        <div className="col-span-1 md:col-span-2 mt-4">
+                          <h5 className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-6 font-sans font-medium flex items-center gap-2">
+                            <Compass className="w-4 h-4 text-emerald-400" /> Life-Phase Alignment Roadmap
+                          </h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {sector.lifecycleForecast.map((phase: any, i: number) => (
+                              <div key={i} className="bg-black/30 p-5 rounded-xl border border-white/5 relative hover:border-emerald-500/20 transition-all group overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/0 group-hover:bg-emerald-500/5 rounded-full blur-xl pointer-events-none transition-colors duration-500"></div>
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h6 className="text-[13px] font-bold text-zinc-200 font-sans">{phase.phase}</h6>
+                                    <span className="text-[10px] text-zinc-500 tracking-wider uppercase font-sans">{phase.ageRange}</span>
+                                  </div>
+                                  <div className="flex gap-1.5">
+                                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
+                                      P: {phase.rulingNumber}
+                                    </span>
+                                    <span className="text-[10px] text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 font-mono">
+                                      C: {phase.challengeNumber}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mb-3">
+                                  <span className="text-[10px] text-emerald-300 tracking-wider uppercase font-sans font-semibold">Phase Vibe</span>
+                                  <p className="text-xs text-zinc-300 font-sans leading-relaxed italic">
+                                    "{phase.vibe}"
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-zinc-500 tracking-wider uppercase font-sans">Strategic Guidance</span>
+                                  <p className="text-[12px] text-zinc-400 font-sans leading-relaxed">
+                                    {phase.guidance}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}

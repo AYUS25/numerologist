@@ -189,6 +189,21 @@ export interface LifePredictionSector {
   potential: string;
   setbacks: string;
   avoidance: string;
+  karmicIntegration?: string;
+  luckyPillars?: {
+    numbers: number[];
+    colors: string[];
+    days: string[];
+    gemstone: string;
+  };
+  lifecycleForecast?: {
+    phase: string;
+    ageRange: string;
+    vibe: string;
+    rulingNumber: number;
+    challengeNumber: number;
+    guidance: string;
+  }[];
 }
 
 

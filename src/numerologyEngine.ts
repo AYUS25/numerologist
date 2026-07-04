@@ -1996,6 +1996,127 @@ function generateLifePredictions(
     8: "Avoid using spiritual laws merely to manifest money.",
     9: "Avoid carrying the weight of the world at the expense of your joy."
   };
+
+  // Dynamic Karmic Integrations
+  const getKarmicIntegration = (cat: string) => {
+    if (cat === "Career & Ambition") {
+      return "Your professional trajectory is directly entangled with your name-based vibrational lessons. Specifically, " +
+        (lessonNumbers.includes(4) ? "your Karmic Lesson in 4 demands that you master structure, systems, and patient hard work rather than seeking shortcuts. " : "") +
+        (lessonNumbers.includes(8) ? "your Karmic Lesson in 8 requires you to balance spiritual values with material ambition. " : "") +
+        (debts.includes(13) ? "Karmic Debt 13 asks you to rise above physical inertia and construct order. " : "") +
+        (debts.includes(19) ? "Karmic Debt 19 indicates a struggle with authority, demanding that you learn healthy independence and humility. " : "") +
+        (lessonNumbers.includes(4) || lessonNumbers.includes(8) || debts.includes(13) || debts.includes(19) ? "" : "you have minimal karmic friction in your career path, meaning your professional goals can be expressed with high natural fluidity. ") +
+        "To unlock your peak professional power, focus on turning these challenges into a structured, daily-disciplined blueprint.";
+    }
+    if (cat === "Wealth & Finance") {
+      return "Your wealth frequency carries critical karmic lessons. " +
+        (lessonNumbers.includes(8) ? "Karmic Lesson 8 indicates a tendency to swing between hoarding and neglect of financial planning; you must learn that money is a neutral, flowing currency. " : "") +
+        (debts.includes(14) ? "Karmic Debt 14 warns of sudden losses due to impulsive temptations or seeking sensory escapisms; disciplined, conservative diversification is your only shield. " : "") +
+        (lessonNumbers.includes(8) || debts.includes(14) ? "" : "your relationship with abundance is clear of major karmic debts, allowing financial intelligence to translate into material stability. ") +
+        "Aligning your business transactions with absolute ethical accountability will act as a major karmic multiplier.";
+    }
+    if (cat === "Marriage & Relationships") {
+      return "Your emotional sphere is undergoing profound karmic purification. " +
+        (lessonNumbers.includes(2) ? "Karmic Lesson 2 triggers deep fears of emotional vulnerability or passive-aggressive retreats. " : "") +
+        (lessonNumbers.includes(6) ? "Karmic Lesson 6 demands that you stop playing the martyr or smothering loved ones with unrealistic expectations. " : "") +
+        (debts.includes(16) ? "Karmic Debt 16 (the Tower) signifies ego-shattering relationship cycles intended to wake you up to spiritual truth; let go of pride. " : "") +
+        (lessonNumbers.includes(2) || lessonNumbers.includes(6) || debts.includes(16) ? "" : "you have clean interpersonal energy, making it easier to form secure, mutually supportive emotional bonds. ") +
+        "True intimacy begins with emotional sovereignty and clear, compassionate boundaries.";
+    }
+    if (cat === "Health & Vitality") {
+      return "Your physical vessel serves as a dynamic sensor for karmic pressure. " +
+        (lessonNumbers.includes(5) ? "Karmic Lesson 5 points to difficulties with maintaining consistent daily schedules or physical overindulgence. " : "") +
+        (debts.includes(14) ? "Karmic Debt 14 demands absolute moderation and warns against overloading your nervous system during intense cycles. " : "") +
+        (lessonNumbers.includes(5) || debts.includes(14) ? "" : "your biological field is clear of major physical karmic lessons, yielding stable recovery rates and natural adaptability. ") +
+        "Establishing a daily grounding routine to stabilize your biofield is critical.";
+    }
+    // Spiritual Path
+    return "Your spiritual journey is guided by deep, transformative lessons. " +
+      (lessonNumbers.includes(7) ? "Karmic Lesson 7 creates mental over-analytical barriers that prevent you from trusting your psychic intuition. " : "") +
+      (debts.includes(16) ? "Karmic Debt 16 requires a complete ego-surrender to divine intelligence, dismantling dogmas to align with pure cosmic truth. " : "") +
+      (lessonNumbers.includes(7) || debts.includes(16) ? "" : "your psychic channel is highly receptive, granting you direct, lucid downloads and natural synchronicities. ") +
+      "Quiet meditation and breathwork will dissolve intellectual filters and open your connection.";
+  };
+
+  const getLuckyPillars = (cat: string) => {
+    if (cat === "Career & Ambition") {
+      return {
+        numbers: [lp, ex, 1, 8],
+        colors: [1, 8].includes(lp) ? ["Solar Crimson", "Burnished Gold"] : ["Deep Navy", "Sovereign Blue"],
+        days: [1, 9].includes(lp) ? ["Sunday", "Tuesday"] : ["Monday", "Wednesday"],
+        gemstone: [1, 8].includes(lp) ? "Ruby" : "Blue Sapphire"
+      };
+    }
+    if (cat === "Wealth & Finance") {
+      return {
+        numbers: [ex, 8, 4],
+        colors: ["Pyrite Gold", "Forest Green"],
+        days: ["Thursday", "Saturday"],
+        gemstone: "Citrine"
+      };
+    }
+    if (cat === "Marriage & Relationships") {
+      return {
+        numbers: [su, lp, 2, 6],
+        colors: ["Rose Pink", "Peach Blossom"],
+        days: ["Friday", "Monday"],
+        gemstone: "Rose Quartz"
+      };
+    }
+    if (cat === "Health & Vitality") {
+      return {
+        numbers: [lp, 5, 6],
+        colors: ["Emerald Green", "Sage"],
+        days: ["Wednesday", "Thursday"],
+        gemstone: "Green Aventurine"
+      };
+    }
+    return {
+      numbers: [su, 7, 9, 11],
+      colors: ["Amethyst Purple", "Cosmic Violet"],
+      days: ["Thursday", "Sunday"],
+      gemstone: "Amethyst"
+    };
+  };
+
+  const getLifecycleForecast = (cat: string) => {
+    return pinnacles.map((p, i) => {
+      const pNum = p.number;
+      const cNum = challenges[i]?.number || 0;
+      const ageRange = p.ageRange;
+      const phaseName = i === 0 ? "First Cycle (Formative)" : i === 1 ? "Second Cycle (Productive)" : i === 2 ? "Third Cycle (Power Years)" : "Fourth Cycle (Wisdom Years)";
+      
+      let vibe = "";
+      let guidance = "";
+
+      if (cat === "Career & Ambition") {
+        vibe = [1, 8, 22].includes(pNum) ? "High-yield executive leadership & professional expansion" : [4, 11].includes(pNum) ? "Structured building & master-level systems calibration" : [3, 5].includes(pNum) ? "Creative freedom, communication, and high adaptability" : "Collaborative growth and professional supportive alliances";
+        guidance = "With Pinnacle " + pNum + " and Challenge " + cNum + ", this phase is designed to " + ([8, 1, 22].includes(pNum) ? "launch you into executive autonomy. Stand firm and construct your legacy. " : "build firm foundational systems. Avoid shortcuts or rushing. ") + ([4, 8].includes(cNum) ? "Expect tests around discipline and resource control; do not let self-doubt delay your launch." : "Overcome passive-aggressive delays and act with sovereign courage.");
+      } else if (cat === "Wealth & Finance") {
+        vibe = [8, 22].includes(pNum) ? "Massive wealth accumulation & material prosperity cycles" : pNum === 4 ? "Conservative accumulation and structural brick-by-brick savings" : [3, 5].includes(pNum) ? "Dynamic, fluctuating streams of income requiring active budgeting" : "Supportive financial flow through partnerships and family assets";
+        guidance = "Your financial success in this cycle relies on managing Pinnacle " + pNum + " and Challenge " + cNum + ". " + ([8, 22].includes(pNum) ? "This is your prime materialization harvest phase. Invest wisely and scale. " : "Focus on low-risk, brick-by-brick investments and avoid speculative bubbles. ") + ([8, 4].includes(cNum) ? "Guard against financial disorganization or over-leveraging under this active challenge." : "Remain adaptable and avoid emotional spending during shifting tides.");
+      } else if (cat === "Marriage & Relationships") {
+        vibe = [2, 6, 33].includes(pNum) ? "Deep romantic consolidation, emotional safe harbors & family unity" : [9, 3].includes(pNum) ? "Unconditional compassion, high social engagement, and creative love" : [1, 5, 7].includes(pNum) ? "Independent exploration and unconventional, high-freedom relationships" : "Stable, comfortable partners-in-action cycles";
+        guidance = "Under Pinnacle " + pNum + " and Challenge " + cNum + ", relationships require " + ([2, 6, 33].includes(pNum) ? "nurturing emotional safety and building a domestic sanctuary of mutual devotion. " : "honoring individual freedom and giving each other breathing room. ") + ([2, 6].includes(cNum) ? "Avoid codependency, martyrdom, or unvoiced passive-aggressive resentments." : "Overcome rigid stubbornness and speak from your heart.");
+      } else if (cat === "Health & Vitality") {
+        vibe = pNum === 5 ? "High sensory output, travel, and adrenal-restoration demands" : [4, 8].includes(pNum) ? "Physical endurance and rigorous discipline tracking requirements" : [2, 6].includes(pNum) ? "Nervous system sensitivity requiring heart-centered emotional cooling" : "Steady vitality and robust natural recovery";
+        guidance = "Your biological vessel responds to Pinnacle " + pNum + " and Challenge " + cNum + ". " + (pNum === 5 ? "Guard against adrenal fatigue from rapid changes; schedule regular rest intervals. " : "Maintain strict diet and sleep discipline; do not overwork your physical limits. ") + ([5, 7].includes(cNum) ? "Your nervous system is highly active; prioritize meditation and downregulate stress before bedtime." : "A stable, grounding lifestyle acts as your shield.");
+      } else {
+        // Spiritual Path
+        vibe = [7, 11, 22, 33].includes(pNum) ? "Transcendent psychic awakening, high-frequency downloads & esoteric mastery" : pNum === 9 ? "Universal love, absolute ego-surrender and ancestral clearing" : [1, 5].includes(pNum) ? "Independent soul discovery, travel, and courage expansion" : "Earthly service and practical spiritual integration";
+        guidance = "Your soul's awakening is amplified by Pinnacle " + pNum + " and Challenge " + cNum + ". " + ([7, 11, 33].includes(pNum) ? "A peak period for esoteric study, meditation, and connecting with higher guides. " : "Focus on selfless service, compassion, and letting go of material attachments. ") + ([7, 9].includes(cNum) ? "Release intellectual pride or fear of solitude; open your third-eye to direct downloads." : "Learn to see the sacred in the mundane and find peace in every breath.");
+      }
+
+      return {
+        phase: phaseName,
+        ageRange,
+        vibe,
+        rulingNumber: pNum,
+        challengeNumber: cNum,
+        guidance
+      };
+    });
+  };
   
   return [
     {
@@ -2003,35 +2124,50 @@ function generateLifePredictions(
       score: baseCareer,
       potential: getNumLabel(lp, careerPotentials),
       setbacks: getNumLabel(ex, careerSetbacks),
-      avoidance: getNumLabel(lp, careerAvoidance)
+      avoidance: getNumLabel(lp, careerAvoidance),
+      karmicIntegration: getKarmicIntegration("Career & Ambition"),
+      luckyPillars: getLuckyPillars("Career & Ambition"),
+      lifecycleForecast: getLifecycleForecast("Career & Ambition")
     },
     {
       category: "Marriage & Relationships",
       score: baseMarriage,
       potential: getNumLabel(su, marriagePotentials),
       setbacks: getNumLabel(lp, marriageSetbacks),
-      avoidance: getNumLabel(lp, marriageAvoidance)
+      avoidance: getNumLabel(lp, marriageAvoidance),
+      karmicIntegration: getKarmicIntegration("Marriage & Relationships"),
+      luckyPillars: getLuckyPillars("Marriage & Relationships"),
+      lifecycleForecast: getLifecycleForecast("Marriage & Relationships")
     },
     {
       category: "Health & Vitality",
       score: baseHealth,
       potential: getNumLabel(lp, healthPotentials),
       setbacks: getNumLabel(su, healthSetbacks),
-      avoidance: getNumLabel(lp, healthAvoidance)
+      avoidance: getNumLabel(lp, healthAvoidance),
+      karmicIntegration: getKarmicIntegration("Health & Vitality"),
+      luckyPillars: getLuckyPillars("Health & Vitality"),
+      lifecycleForecast: getLifecycleForecast("Health & Vitality")
     },
     {
       category: "Wealth & Finance",
       score: baseMoney,
       potential: getNumLabel(ex, moneyPotentials),
       setbacks: getNumLabel(lp, moneySetbacks),
-      avoidance: getNumLabel(lp, moneyAvoidance)
+      avoidance: getNumLabel(lp, moneyAvoidance),
+      karmicIntegration: getKarmicIntegration("Wealth & Finance"),
+      luckyPillars: getLuckyPillars("Wealth & Finance"),
+      lifecycleForecast: getLifecycleForecast("Wealth & Finance")
     },
     {
       category: "Spiritual Path",
       score: baseSpiritual,
       potential: getNumLabel(su, spiritualPotentials),
       setbacks: getNumLabel(lp, spiritualSetbacks),
-      avoidance: getNumLabel(lp, spiritualAvoidance)
+      avoidance: getNumLabel(lp, spiritualAvoidance),
+      karmicIntegration: getKarmicIntegration("Spiritual Path"),
+      luckyPillars: getLuckyPillars("Spiritual Path"),
+      lifecycleForecast: getLifecycleForecast("Spiritual Path")
     }
   ];
 }
