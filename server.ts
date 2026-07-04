@@ -33,6 +33,9 @@ app.post("/api/numerology/calculate", (req, res) => {
     const report = generateNumerologyReport(fullName, dateOfBirth, timeOfBirth, placeOfBirth);
     return res.json(report);
   } catch (err: any) {
+    if (err?.status === 429 || err?.message?.includes('429')) {
+       return res.status(429).setHeader('Retry-After', '5').json({ error: 'Rate limited' });
+    }
     console.error("Calculation error:", err);
     return res.status(500).json({ error: err.message || "Failed to generate numerology analysis." });
   }
@@ -164,8 +167,11 @@ ${challengesText}
     const botReply = response.text || "The cosmos are whispering in silences right now. Please repeat your query, my dear seeker.";
     return res.json({ reply: botReply });
   } catch (err: any) {
-    console.warn("Gemini API call failed, invoking premium local oracle fallback:", err);
-
+    if (err?.status === 429 || err?.message?.includes('429')) {
+       return res.status(429).setHeader('Retry-After', '5').json({ error: 'Rate limited' });
+    }
+    // Silent fallback when Gemini API fails due to quotas
+    
     const m = report.metrics;
     const userMessageLower = userMessage.toLowerCase();
     
@@ -333,7 +339,10 @@ Use professional, mystical, but grounded language. Do not use markdown headers, 
 
     return res.json({ forecast: botReply });
   } catch (err: any) {
-    console.warn("Gemini daily-forecast API failed, invoking local fallback generator:", err);
+    if (err?.status === 429 || err?.message?.includes('429')) {
+       return res.status(429).setHeader('Retry-After', '5').json({ error: 'Rate limited' });
+    }
+    // Silent fallback when Gemini API fails due to quotas
     
     const m = report.metrics;
     const lp = m.lifePath.number;
@@ -464,7 +473,10 @@ Return the response EXACTLY as a JSON object with this structure (no markdown ta
 
     return res.json({ sectors: result });
   } catch (err: any) {
-    console.warn("Gemini life-sectors API failed, invoking local fallback generator:", err);
+    if (err?.status === 429 || err?.message?.includes('429')) {
+       return res.status(429).setHeader('Retry-After', '5').json({ error: 'Rate limited' });
+    }
+    // Silent fallback when Gemini API fails due to quotas
     
     const m = report.metrics;
     const lp = m.lifePath.number;

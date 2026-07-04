@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fetchWithRetry } from '../apiClient';
 import { motion, AnimatePresence } from 'motion/react';
 import InfoTooltip from './InfoTooltip';
 import GlossaryDrawer from './GlossaryDrawer';
@@ -326,18 +327,27 @@ export default function ReportView({ report, onReset }: ReportViewProps) {
   };
 
   useEffect(() => {
-    if (activeTab === 'forecast' && !dailyHoroscope && !isLoadingHoroscope) {
+    if (activeTab === 'forecast' && !dailyHoroscope && !isLoadingHoroscope && report?.input) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const clientCacheKey = `daily_horoscope_${report.input.fullName}_${report.input.dateOfBirth}_${todayStr}`;
+      const cached = localStorage.getItem(clientCacheKey);
+      if (cached) {
+        setDailyHoroscope(cached);
+        return;
+      }
+      
       const fetchHoroscope = async () => {
         setIsLoadingHoroscope(true);
         try {
-          const res = await fetch('/api/numerology/daily-forecast', {
+          const data = await fetchWithRetry('/api/numerology/daily-forecast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ report })
           });
-          const data = await res.json();
+          
           if (data.forecast) {
             setDailyHoroscope(data.forecast);
+            localStorage.setItem(clientCacheKey, data.forecast);
           }
         } catch (e) {
           console.error(e);

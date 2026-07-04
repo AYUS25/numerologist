@@ -1,7 +1,7 @@
-import { initAudio, playTactileClick, playHoverTick, playMechanicalDial } from './audio';
+import { initAudio, playTactileClick, playHoverTick, playMechanicalDial, useAudio } from './audio';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Compass, Moon, Sun, AlertCircle, HelpCircle, LogIn, LogOut, User as UserIcon, Save, Trash2, Database, History, Info } from 'lucide-react';
+import { Sparkles, Compass, Moon, Sun, AlertCircle, HelpCircle, LogIn, LogOut, User as UserIcon, Save, Trash2, Database, History, Info, Volume2, VolumeX, Music } from 'lucide-react';
 import IntakeForm from './components/IntakeForm';
 import ReportView from './components/ReportView';
 import ChatBot from './components/ChatBot';
@@ -14,20 +14,182 @@ import { auth } from './firebase';
 import { saveReading, getSavedReadings, deleteSavedReading, SavedReading } from './dbHelper';
 import AuthModal from './components/AuthModal';
 
-export default function App() {
-  React.useEffect(() => {
-    const handleFirstInteraction = () => {
-      initAudio();
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
+// --- API Queue and Quota Tracking ---
+let apiQueue: any[] = [];
+let isProcessingQueue = false;
+export const globalApiMetrics = {
+  success: 0,
+  failed: 0,
+  retries: 0,
+  quotaRemaining: 1500, // example starting quota
+  isRateLimited: false,
+};
+const metricsListeners = new Set<any>();
+export const subscribeToApiMetrics = (listener) => {
+  metricsListeners.add(listener);
+  return () => metricsListeners.delete(listener);
+};
+const notifyMetricsListeners = () => {
+  metricsListeners.forEach(l => l({...globalApiMetrics}));
+};
+
+const processQueue = async () => {
+  if (isProcessingQueue || apiQueue.length === 0) return;
+  isProcessingQueue = true;
+  
+  while (apiQueue.length > 0) {
+    const task = apiQueue[0];
+    try {
+      const result = await task.execute();
+      task.resolve(result);
+      apiQueue.shift();
+      
+      // small delay between queue items if not rate limited
+      if (apiQueue.length > 0 && !globalApiMetrics.isRateLimited) {
+         await new Promise(r => setTimeout(r, 200));
+      }
+    } catch (error) {
+      if (error.status === 429) {
+        globalApiMetrics.isRateLimited = true;
+        notifyMetricsListeners();
+        
+        let retryAfterMs = error.retryAfter ? parseInt(error.retryAfter, 10) * 1000 : 5000;
+        if (isNaN(retryAfterMs)) retryAfterMs = 5000;
+        
+        // Wait before processing next item
+        await new Promise(r => setTimeout(r, retryAfterMs));
+        globalApiMetrics.isRateLimited = false;
+        notifyMetricsListeners();
+      } else {
+        task.reject(error);
+        apiQueue.shift();
+      }
+    }
+  }
+  isProcessingQueue = false;
+};
+
+const fetchWithRetry = (url: string, options: any = {}, retries: number = 3): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const execute = async () => {
+      let currentRetries = 0;
+      let backoffMs = 1000;
+      
+      while (currentRetries <= retries) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) {
+             globalApiMetrics.success++;
+             globalApiMetrics.quotaRemaining = Math.max(0, globalApiMetrics.quotaRemaining - 1);
+             notifyMetricsListeners();
+             return res;
+          }
+          
+          if (res.status === 429) {
+             const retryAfter = res.headers.get('Retry-After');
+             throw { status: 429, retryAfter, message: 'Rate limited' };
+          }
+          
+          throw new Error(`HTTP error! status: ${res.status}`);
+        } catch (error) {
+          if (error.status === 429) {
+             globalApiMetrics.retries++;
+             notifyMetricsListeners();
+             throw error; // Let the queue handle 429
+          }
+          
+          currentRetries++;
+          globalApiMetrics.retries++;
+          notifyMetricsListeners();
+          
+          if (currentRetries > retries) {
+            globalApiMetrics.failed++;
+            notifyMetricsListeners();
+            throw error;
+          }
+          
+          // Exponential backoff
+          await new Promise(r => setTimeout(r, backoffMs));
+          backoffMs *= 2;
+        }
+      }
     };
-    document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('touchstart', handleFirstInteraction);
+    
+    apiQueue.push({ execute, resolve, reject });
+    processQueue();
+  });
+};
+// -------------------------------------
+
+
+const DevDiagnosticOverlay = () => {
+  const [metrics, setMetrics] = useState(globalApiMetrics);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToApiMetrics(setMetrics);
+    
+    const handleKeyDown = (e) => {
+      // Toggle with Ctrl+Shift+D
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
+        setIsVisible(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-    };
+      unsubscribe();
+      window.removeEventListener('keydown', handleKeyDown);
+    }
   }, []);
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed bottom-4 left-4 z-[999] bg-black/90 border border-green-500/50 p-4 rounded-md font-mono text-[10px] text-green-400 w-64 shadow-2xl backdrop-blur-sm">
+      <div className="flex justify-between items-center border-b border-green-500/30 pb-2 mb-2">
+        <span className="font-bold uppercase tracking-wider text-green-500">Dev Diagnostics</span>
+        <button onClick={() => setIsVisible(false)} className="hover:text-green-200">✕</button>
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-between"><span>API Quota (Est):</span> <span>{metrics.quotaRemaining}</span></div>
+        <div className="flex justify-between text-blue-400"><span>Successful Calls:</span> <span>{metrics.success}</span></div>
+        <div className="flex justify-between text-rose-400"><span>Failed Calls:</span> <span>{metrics.failed}</span></div>
+        <div className="flex justify-between text-amber-400"><span>Retries Triggered:</span> <span>{metrics.retries}</span></div>
+        <div className="flex justify-between">
+          <span>Queue Status:</span> 
+          <span className={metrics.isRateLimited ? 'text-amber-500 animate-pulse' : 'text-green-500'}>
+            {metrics.isRateLimited ? 'RATE LIMITED (WAITING)' : 'IDLE'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const ApiStatusIndicator = () => {
+  const [metrics, setMetrics] = useState(globalApiMetrics);
+  
+  useEffect(() => {
+    const unsub = subscribeToApiMetrics(setMetrics); return () => { unsub(); };
+  }, []);
+
+  const isHealthy = !metrics.isRateLimited && metrics.failed < 5;
+
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#111] border border-white/5 rounded-full" title={isHealthy ? 'API Healthy' : 'Rate Limited/Offline'}>
+      <div className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`}></div>
+      <span className={`text-[9px] uppercase tracking-wider font-bold ${isHealthy ? 'text-emerald-500' : 'text-amber-500'}`}>
+        {isHealthy ? 'API Healthy' : 'Rate Limited'}
+      </span>
+    </div>
+  );
+};
+
+
+
+export default function App() {
+  const { soundEnabled, setSoundEnabled, droneEnabled, setDroneEnabled } = useAudio();
   const [report, setReport] = useState<NumerologyReport | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatSessions, setChatSessions] = useState<{id: string, date: string, messages: ChatMessage[]}[]>([]);
@@ -103,6 +265,7 @@ export default function App() {
   const handleLoadSavedReading = (reading: SavedReading) => {
     playTactileClick();
     setIsLoading(true);
+    setDailyTransit('');
     setTimeout(() => {
       try {
         const input: NumerologyInput = {
@@ -113,7 +276,10 @@ export default function App() {
         };
         const rep = generateNumerologyReport(input.fullName, input.dateOfBirth, input.timeOfBirth, input.placeOfBirth, input.phoneNumber);
         setReport(rep);
+        localStorage.setItem('numerology_input', JSON.stringify(input));
+        localStorage.setItem('numerology_report', JSON.stringify(rep));
         setChatHistory([]);
+        localStorage.removeItem('numerology_chat');
       } catch (err: any) {
         setToast({ message: 'Error restoring saved blueprint.', type: 'error' });
       } finally {
@@ -169,7 +335,7 @@ export default function App() {
   useEffect(() => {
     if (report && !dailyTransit && !isTransitLoading) {
       setIsTransitLoading(true);
-      fetch('/api/numerology/daily-forecast', {
+      fetchWithRetry('/api/numerology/daily-forecast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ report })
@@ -185,10 +351,15 @@ export default function App() {
     const savedInput = localStorage.getItem('numerology_input');
     if (savedInput) {
       try {
-        const parsed = JSON.parse(savedInput) as NumerologyInput;
-        // Regenerate the report from saved inputs
-        const rep = generateNumerologyReport(parsed.fullName, parsed.dateOfBirth, parsed.timeOfBirth, parsed.placeOfBirth, parsed.phoneNumber);
-        setReport(rep);
+        const savedReport = localStorage.getItem('numerology_report');
+        if (savedReport) {
+          setReport(JSON.parse(savedReport));
+        } else {
+          const parsed = JSON.parse(savedInput) as NumerologyInput;
+          const rep = generateNumerologyReport(parsed.fullName, parsed.dateOfBirth, parsed.timeOfBirth, parsed.placeOfBirth, parsed.phoneNumber);
+          setReport(rep);
+          localStorage.setItem('numerology_report', JSON.stringify(rep));
+        }
         
         // Restore saved chat history
         const savedChat = localStorage.getItem('numerology_chat');
@@ -211,6 +382,7 @@ export default function App() {
   const handleIntakeSubmit = (input: NumerologyInput) => {
     setIsLoading(true);
     setToast(null);
+    setDailyTransit('');
     
     // Simulate celestial computation time (1.2 seconds of cosmic loader)
     setTimeout(() => {
@@ -218,8 +390,9 @@ export default function App() {
         const rep = generateNumerologyReport(input.fullName, input.dateOfBirth, input.timeOfBirth, input.placeOfBirth, input.phoneNumber);
         setReport(rep);
         
-        // Cache input details
+        // Cache input and calculated report details
         localStorage.setItem('numerology_input', JSON.stringify(input));
+        localStorage.setItem('numerology_report', JSON.stringify(rep));
         
         // Clear old chat for new profile
         setChatHistory([]);
@@ -249,7 +422,7 @@ export default function App() {
     setIsChatLoading(true);
 
     try {
-      const response = await fetch('/api/numerology/chat', {
+      const response: any = await fetchWithRetry('/api/numerology/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,7 +453,7 @@ export default function App() {
       const errorMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'model',
-        content: `My channels are currently clouded by cosmic debris: "${err.message || 'Network Disruption'}". Let us retry shortly, my dear seeker.`,
+        content: "### 🌌 Celestial Realignment in Progress\n\nThe direct link to the universal source is temporarily experiencing interference. Please wait a moment while the energies recalibrate. \n\n**In the meantime, reflect on:**\n- Your Life Path Number: " + report.metrics.lifePath.number + "\n- Your current Personal Year: " + report.metrics.personalYear.number + "\n\nTry sending your message again shortly.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setChatHistory([...updatedHistory, errorMsg]);
@@ -293,7 +466,9 @@ export default function App() {
   const handleReset = () => {
     setReport(null);
     setChatHistory([]);
+    setDailyTransit('');
     localStorage.removeItem('numerology_input');
+    localStorage.removeItem('numerology_report');
     localStorage.removeItem('numerology_chat');
     setToast(null);
   };
@@ -348,6 +523,8 @@ export default function App() {
           
           {/* Controls & Auth */}
           <div className="flex items-center gap-4 sm:gap-6 text-[10px] uppercase font-mono tracking-tighter text-slate-400">
+            <ApiStatusIndicator />
+
             {report && (
               <div className="flex items-center gap-3 border-r border-white/5 pr-4 sm:pr-6">
                 <button 
@@ -372,6 +549,34 @@ export default function App() {
               </div>
             )}
             
+            {/* Audio Preferences Widget */}
+            <div className="flex items-center gap-1.5 border-r border-white/5 pr-4">
+              <button
+                onClick={() => {
+                  setSoundEnabled(!soundEnabled);
+                  setTimeout(() => playMechanicalDial(), 0);
+                }}
+                onMouseEnter={() => playHoverTick()}
+                className={`p-1.5 rounded hover:bg-white/5 cursor-pointer transition-colors ${soundEnabled ? 'text-gold-accent hover:text-white' : 'text-slate-600 hover:text-slate-500'}`}
+                title={soundEnabled ? "Mute Cosmic Harmonics" : "Unmute Cosmic Harmonics"}
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </button>
+              
+              <button
+                onClick={() => {
+                  setDroneEnabled(!droneEnabled);
+                  setTimeout(() => playMechanicalDial(), 0);
+                }}
+                onMouseEnter={() => playHoverTick()}
+                className={`p-1.5 rounded hover:bg-white/5 cursor-pointer transition-colors ${soundEnabled && droneEnabled ? 'text-gold-accent hover:text-white' : 'text-slate-600 hover:text-slate-500'}`}
+                title={droneEnabled ? "Silence Celestial Drone" : "Resonate Celestial Drone"}
+                disabled={!soundEnabled}
+              >
+                <Music className="w-4 h-4" />
+              </button>
+            </div>
+
             {/* User Auth Section */}
             <div className="flex items-center gap-3">
               {user ? (
@@ -632,6 +837,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <DevDiagnosticOverlay />
     </div>
   );
 }

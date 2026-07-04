@@ -46,12 +46,22 @@ export default function ChatBot({ report, messages, onSendMessage, onClearChat, 
     `How do my Soul Urge ${report.metrics.soulUrge.number} and Personality ${report.metrics.personality.number} compare?`
   ];
 
+  // Clean up all voice synthesis on unmount to prevent persistent speaking or stuck states
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   // Initialize Speech Recognition
   useEffect(() => {
+    let rec: any = null;
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        const rec = new SpeechRecognition();
+        rec = new SpeechRecognition();
         rec.continuous = false; // Stop when speech pauses to allow automatic submit
         rec.interimResults = true;
         
@@ -120,6 +130,13 @@ export default function ChatBot({ report, messages, onSendMessage, onClearChat, 
         recognitionRef.current = rec;
       }
     }
+    return () => {
+      if (rec) {
+        try {
+          rec.abort();
+        } catch (e) {}
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -162,41 +179,144 @@ export default function ChatBot({ report, messages, onSendMessage, onClearChat, 
       .replace(/\[\d+\]/g, '') // remove citation brackets
       .trim();
 
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.lang = language;
-    
-    utterance.onstart = () => {
-      setVoiceStatus('speaking');
-      if (isInteractiveModeRef.current) {
-        try {
-          recognitionRef.current?.stop();
-          setIsListening(false);
-        } catch (e) {}
-      }
-    };
+    if (!cleanedText) return;
 
-    const handleEnd = () => {
+    // Split text into readable chunks (under 150 chars)
+    // to prevent Chrome Web Speech API garbage collection and silent cutoff bugs.
+    const chunks: string[] = [];
+    const rawSentences = cleanedText.split(/([.!?]+)/g);
+    let currentChunk = '';
+    
+    for (let i = 0; i < rawSentences.length; i++) {
+      const part = rawSentences[i];
+      if (!part) continue;
+      
+      if (part.match(/^[.!?]+$/)) {
+        currentChunk += part;
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      } else {
+        if (currentChunk) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+        
+        if (part.length > 150) {
+          const clauses = part.split(/([,;:\n]+)/g);
+          let currentClause = '';
+          for (let j = 0; j < clauses.length; j++) {
+            const cl = clauses[j];
+            if (!cl) continue;
+            if (cl.match(/^[,;:\n]+$/)) {
+              currentClause += cl;
+              chunks.push(currentClause.trim());
+              currentClause = '';
+            } else {
+              if (currentClause) {
+                chunks.push(currentClause.trim());
+                currentClause = '';
+              }
+              if (cl.length > 150) {
+                const words = cl.split(' ');
+                let subChunk = '';
+                for (const word of words) {
+                  if ((subChunk + ' ' + word).length > 120) {
+                    chunks.push(subChunk.trim());
+                    subChunk = word;
+                  } else {
+                    subChunk = subChunk ? subChunk + ' ' + word : word;
+                  }
+                }
+                if (subChunk) {
+                  currentClause = subChunk;
+                }
+              } else {
+                currentClause = cl;
+              }
+            }
+          }
+          if (currentClause) {
+            currentChunk = currentClause;
+          }
+        } else {
+          currentChunk = part;
+        }
+      }
+    }
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+
+    const filteredChunks = chunks.map(c => c.trim()).filter(c => c.length > 0);
+    if (filteredChunks.length === 0) {
       setVoiceStatus('idle');
       setCurrentlySpokenMsgId(null);
-      if (isInteractiveModeRef.current && !isLoading) {
-        setTimeout(() => {
+      return;
+    }
+
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    // Save utterances globally to prevent garbage collection in Chrome
+    const activeUtterances: SpeechSynthesisUtterance[] = [];
+    (window as any)._activeUtterances = activeUtterances;
+
+    const totalChunks = filteredChunks.length;
+    const voices = typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const languageCode = language.split('-')[0].toLowerCase();
+    const matchedVoice = voices.find(v => {
+      const vLang = v.lang.toLowerCase();
+      return vLang === language.toLowerCase() || vLang.startsWith(languageCode);
+    });
+    
+    filteredChunks.forEach((chunk, index) => {
+      const utterance = new SpeechSynthesisUtterance(chunk);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.05;
+      utterance.lang = language;
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      if (index === 0) {
+        utterance.onstart = () => {
+          setVoiceStatus('speaking');
           if (isInteractiveModeRef.current) {
             try {
-              recognitionRef.current?.start();
-              setIsListening(true);
-              setVoiceStatus('listening');
+              recognitionRef.current?.stop();
+              setIsListening(false);
             } catch (e) {}
           }
-        }, 400);
+        };
       }
-    };
 
-    utterance.onend = handleEnd;
-    utterance.onerror = handleEnd;
+      const isLast = index === totalChunks - 1;
 
-    window.speechSynthesis.speak(utterance);
+      const handleEnd = () => {
+        if (isLast) {
+          setVoiceStatus('idle');
+          setCurrentlySpokenMsgId(null);
+          if (isInteractiveModeRef.current && !isLoading) {
+            setTimeout(() => {
+              if (isInteractiveModeRef.current) {
+                try {
+                  recognitionRef.current?.start();
+                  setIsListening(true);
+                  setVoiceStatus('listening');
+                } catch (e) {}
+              }
+            }, 400);
+          }
+        }
+      };
+
+      utterance.onend = handleEnd;
+      utterance.onerror = handleEnd;
+
+      activeUtterances.push(utterance);
+      window.speechSynthesis.speak(utterance);
+    });
   };
 
   // Handle automatic readout of incoming AI model replies
